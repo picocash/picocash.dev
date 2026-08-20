@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PicoCash demo — mint, send, melt on Tempo testnet</title>
+<link rel="icon" type="image/png" href="../assets/picocash-icon.png">
+<script>
+  (function () { var t = localStorage.getItem('picocash-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); })();
+</script>
+<style>
+  :root {
+    --blue:#154c9c; --green:#1f9e5a; --accent-b:#154c9c; --accent-g:#1f9e5a;
+    --ink:#16202e; --dim:#5b6878; --bg:#ffffff; --panel:#f5f8fb; --line:#e3e9f0; --field:#ffffff;
+    --code-bg:#eaf0f7; --badge-bg:#fef6e2; --badge-ink:#8a6210; --badge-line:#efdca6;
+    --btn:#154c9c; --btn-hover:#113e80; --warn:#9a6700; --err:#b42318; --ok:#1f9e5a;
+    --logo-img:block; --logo-text:none; --mono: ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --accent-b:#6aa1f0; --accent-g:#3dc47c; --ink:#e7ebf1; --dim:#93a0b0; --bg:#0e1116; --panel:#161b23; --line:#26303d; --field:#0b0e13;
+    --code-bg:#0b0e13; --badge-bg:#3a2b0a; --badge-ink:#fbbf24; --badge-line:#6b510f; --btn:#2f6ac2; --btn-hover:#3d7ad4;
+    --warn:#fbbf24; --err:#f87171; --ok:#4ade80; --logo-img:none; --logo-text:inline; } }
+  :root[data-theme="dark"] {
+    --accent-b:#6aa1f0; --accent-g:#3dc47c; --ink:#e7ebf1; --dim:#93a0b0; --bg:#0e1116; --panel:#161b23; --line:#26303d; --field:#0b0e13;
+    --code-bg:#0b0e13; --badge-bg:#3a2b0a; --badge-ink:#fbbf24; --badge-line:#6b510f; --btn:#2f6ac2; --btn-hover:#3d7ad4;
+    --warn:#fbbf24; --err:#f87171; --ok:#4ade80; --logo-img:none; --logo-text:inline; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { border-bottom:1px solid var(--line); }
+  nav { max-width:720px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; }
+  nav img { height:30px; display:var(--logo-img); }
+  .brand-text { display:var(--logo-text); font-size:22px; font-weight:800; }
+  .brand-text .b { color:var(--accent-b); } .brand-text .g { color:var(--accent-g); }
+  nav .right { display:flex; align-items:center; gap:16px; }
+  nav .right a { color:var(--ink); font-weight:600; font-size:14px; text-decoration:none; }
+  nav .right a:hover { color:var(--accent-b); }
+  #themeToggle { background:var(--panel); border:1px solid var(--line); color:var(--ink); border-radius:99px; padding:4px 11px; font:600 12px/1.4 inherit; cursor:pointer; }
+  .wrap { max-width:720px; margin:0 auto; padding:20px 16px 64px; }
+  h1 { font-size:22px; margin:0; } h1 small { color:var(--dim); font-weight:400; font-size:13px; }
+  .banner { background:var(--badge-bg); color:var(--badge-ink); border:1px solid var(--badge-line); border-radius:8px; padding:8px 12px; font-size:13px; margin:14px 0; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; margin:14px 0; }
+  .card h2 { font-size:13px; margin:0 0 10px; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; }
+  label { display:block; font-size:12px; color:var(--dim); margin:8px 0 3px; }
+  input, textarea { width:100%; background:var(--field); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-family:var(--mono); font-size:13px; }
+  textarea { height:110px; font-size:11px; color:var(--dim); }
+  button { background:var(--btn); color:#fff; border:0; border-radius:6px; padding:9px 16px; font-weight:600; font-size:14px; cursor:pointer; margin:10px 8px 0 0; }
+  button:hover { background:var(--btn-hover); }
+  button.secondary { background:var(--panel); color:var(--ink); border:1px solid var(--line); }
+  button.secondary:hover { background:var(--line); }
+  button:disabled { opacity:.45; cursor:default; }
+  .balance { font-size:34px; font-weight:700; color:var(--accent-b); } .balance small { font-size:15px; color:var(--dim); font-weight:400; }
+  .kv { font-family:var(--mono); font-size:12px; color:var(--dim); word-break:break-all; margin:2px 0; } .kv b { color:var(--ink); font-weight:500; }
+  #log { font-family:var(--mono); font-size:12px; background:var(--field); border:1px solid var(--line); border-radius:6px; padding:10px; max-height:220px; overflow-y:auto; white-space:pre-wrap; word-break:break-all; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .err { color:var(--err); }
+  table { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px; }
+  td,th { padding:4px 6px; border-bottom:1px solid var(--line); text-align:left; } th { color:var(--dim); font-weight:500; }
+  .spent { color:var(--err); text-decoration:line-through; }
+  details summary { cursor:pointer; color:var(--dim); font-size:13px; margin-top:8px; }
+  .muted { color:var(--dim); font-size:13px; margin:0 0 6px; }
+  @media (max-width:520px) { nav .right a:not(.keep) { display:none; } }
+</style>
+</head>
+<body>
+<header><nav>
+  <a href="../"><img src="../assets/picocash-logo.png" alt="PicoCash"><span class="brand-text" aria-hidden="true"><span class="b">Pico</span><span class="g">Cash</span></span></a>
+  <span class="right">
+    <a href="https://github.com/picocash/pips">pips</a>
+    <a href="https://github.com/picocash/picocash">GitHub</a>
+    <button id="themeToggle" class="keep" aria-label="Toggle color theme">◐ auto</button>
+  </span>
+</nav></header>
+<div class="wrap">
+  <h1>Live demo <small>— mint eCash from a $1 testnet deposit, send it, melt it back</small></h1>
+  <div class="banner">⚠ Tempo <b>Moderato testnet</b> only. Faucet money, throwaway keys, pre-alpha software — nothing here is real.</div>
+
+  <div class="card">
+    <h2>Step 1 — get a testnet wallet</h2>
+    <p class="muted">A throwaway key is generated in your browser and funded with testnet pathUSD from the Tempo faucet. It never leaves this page.</p>
+    <button id="faucetBtn">Create wallet &amp; get testnet funds</button>
+    <div id="walletInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>Step 2 — connect to a mint</h2>
+    <label>Mint URL</label>
+    <input id="mintUrl" value="https://picocash-mint.arun-fad.workers.dev">
+    <button id="connectBtn">Connect</button>
+    <div id="mintInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>Your tokens</h2>
+    <div class="balance"><span id="balance">0.000000</span> <small>USD (testnet pathUSD)</small></div>
+    <div id="tokenTable"></div>
+    <button class="secondary" id="checkBtn" disabled>Check spent states</button>
+    <details><summary>Export raw proofs</summary><textarea id="exportBox" readonly></textarea></details>
+  </div>
+
+  <div class="card">
+    <h2>Step 3 — mint $1 of tokens</h2>
+    <p style="font-size:13px;color:var(--dim);margin:0 0 6px">
+      Requests a quote, sends <b>1.000000 pathUSD</b> on Tempo testnet via
+      <code>transferWithMemo</code> (memo = quote id), then blinds, mints, and DLEQ-verifies your tokens.
+    </p>
+    <details><summary>Advanced: pay from your own testnet key instead</summary>
+      <label>Testnet private key (0x…)</label>
+      <input id="payerKey" type="password" placeholder="auto-filled from step 1">
+    </details>
+    <button id="mintKeyBtn" disabled>Pay with key &amp; mint</button>
+    <button id="mintWalletBtn" class="secondary" disabled>Pay with browser wallet</button>
+    <div id="quoteInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>Step 4 — send &amp; receive (offline-verifiable transfer)</h2>
+    <label>Amount to send ($)</label>
+    <input id="sendAmount" placeholder="0.10">
+    <button id="sendBtn" disabled>Create token bundle</button>
+    <textarea id="sendOut" readonly placeholder="bundle appears here — copy it to the receiver"></textarea>
+    <label style="margin-top:10px">Paste a received bundle</label>
+    <textarea id="recvIn" placeholder='{"mint":…,"proofs":[…]}'></textarea>
+    <button id="recvBtn" disabled>Verify offline &amp; claim</button>
+  </div>
+
+  <div class="card">
+    <h2>Step 5 — melt (withdraw to Tempo testnet)</h2>
+    <label>Amount ($)</label>
+    <input id="meltAmount" placeholder="0.25">
+    <label>Payout address (0x…)</label>
+    <input id="meltTo" placeholder="0x…">
+    <button id="meltBtn" disabled>Melt to on-chain funds</button>
+    <div id="meltInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>Log</h2>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script type="module">
+import { secp256k1 } from 'https://esm.sh/@noble/curves@1.9.2/secp256k1';
+import { sha256 } from 'https://esm.sh/@noble/hashes@1.8.0/sha2';
+import { bytesToHex, hexToBytes, concatBytes, utf8ToBytes } from 'https://esm.sh/@noble/hashes@1.8.0/utils';
+import { createWalletClient, http, defineChain, encodeFunctionData, parseAbi } from 'https://esm.sh/viem@2.38.5';
+import { privateKeyToAccount, generatePrivateKey } from 'https://esm.sh/viem@2.38.5/accounts';
+import { createPublicClient } from 'https://esm.sh/viem@2.38.5';
+
+// faucet proxy lives on the hosted mint worker (works even if you point the mint URL elsewhere)
+const FAUCET_PROXY = 'https://picocash-mint.arun-fad.workers.dev/dev/faucet';
+const RPC = 'https://rpc.moderato.tempo.xyz';
+const TOKEN = '0x20c0000000000000000000000000000000000000';
+
+// ---- crypto client (mirrors packages/crypto; PIP-00) ------------
+const Point = secp256k1.ProjectivePoint;
+const ORDER = secp256k1.CURVE.n;
+const DOMAIN = utf8ToBytes('Secp256k1_HashToCurve_Cashu_');
+const toBig = (b) => BigInt('0x' + bytesToHex(b));
+const modn = (x) => ((x % ORDER) + ORDER) % ORDER;
+
+function hashToCurve(message) {
+  const msgHash = sha256(concatBytes(DOMAIN, message));
+  const counter = new Uint8Array(4); const view = new DataView(counter.buffer);
+  for (let i = 0; i < 65536; i++) {
+    view.setUint32(0, i, true);
+    try { return Point.fromHex(concatBytes(new Uint8Array([2]), sha256(concatBytes(msgHash, counter)))); } catch {}
+  }
+  throw new Error('hash_to_curve failed');
+}
+function blind(secret) {
+  const r = secp256k1.utils.randomPrivateKey();
+  const B_ = hashToCurve(secret).add(Point.BASE.multiply(toBig(r)));
+  return { B_: bytesToHex(B_.toRawBytes(true)), r };
+}
+function unblind(C_hex, r, K_hex) {
+  const C = Point.fromHex(C_hex).subtract(Point.fromHex(K_hex).multiply(toBig(r)));
+  return bytesToHex(C.toRawBytes(true));
+}
+function hashE(...points) {
+  let acc = ''; for (const p of points) acc += bytesToHex(p.toRawBytes(false));
+  return sha256(utf8ToBytes(acc));
+}
+function verifyDleq(B_hex, C_hex, K_hex, dleq) {
+  try {
+    const Bp = Point.fromHex(B_hex), Cp = Point.fromHex(C_hex), Kp = Point.fromHex(K_hex);
+    const e = modn(toBig(hexToBytes(dleq.e))), s = modn(toBig(hexToBytes(dleq.s)));
+    const mul = (P, k) => k === 0n ? Point.ZERO : P.multiply(k);
+    const R1 = mul(Point.BASE, s).subtract(mul(Kp, e));
+    const R2 = mul(Bp, s).subtract(mul(Cp, e));
+    return bytesToHex(hashE(R1, R2, Kp, Cp)) === dleq.e;
+  } catch { return false; }
+}
+const yOf = (secretHex) => bytesToHex(hashToCurve(hexToBytes(secretHex)).toRawBytes(true));
+
+// proof-side (offline) DLEQ: reconstruct B_/C_ from the blinding factor r
+function verifyDleqOffline(proof, K_hex) {
+  try {
+    if (!proof.dleq?.r) return false;
+    const r = toBig(hexToBytes(proof.dleq.r));
+    const Kp = Point.fromHex(K_hex);
+    const B_ = hashToCurve(hexToBytes(proof.secret)).add(Point.BASE.multiply(r));
+    const C_ = Point.fromHex(proof.C).add(Kp.multiply(r));
+    return verifyDleq(bytesToHex(B_.toRawBytes(true)), bytesToHex(C_.toRawBytes(true)), K_hex, proof.dleq);
+  } catch { return false; }
+}
+
+// ---- state -----------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const AMOUNT = 1_000_000; // $1 in 6-decimal base units
+let mint = null;          // { url, unit, keyset:{id, keys} }
+let tokens = JSON.parse(localStorage.getItem('picocash.demo.tokens') ?? '[]');
+const transferAbi = parseAbi(['function transferWithMemo(address to, uint256 amount, bytes32 memo)']);
+
+function log(msg, cls = '') {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = `${new Date().toLocaleTimeString()}  ${msg}`;
+  $('log').appendChild(line); $('log').scrollTop = 1e9;
+}
+async function api(method, path, body) {
+  const res = await fetch(`${mint.url}${path}`, {
+    method, ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const e = json.error ?? {};
+    throw new Error(`${e.code ?? res.status}: ${e.message ?? 'request failed'}${e.recovery ? ` — ${e.recovery}` : ''}`);
+  }
+  return json;
+}
+function saveTokens() { localStorage.setItem('picocash.demo.tokens', JSON.stringify(tokens)); render(); }
+function render() {
+  const live = tokens.filter((t) => !t.spent);
+  $('balance').textContent = (live.reduce((s, t) => s + t.amount, 0) / 1e6).toFixed(6);
+  $('checkBtn').disabled = !mint || tokens.length === 0;
+  $('exportBox').value = JSON.stringify(tokens, null, 1);
+  if (!tokens.length) { $('tokenTable').innerHTML = ''; return; }
+  const rows = tokens.map((t) =>
+    `<tr class="${t.spent ? 'spent' : ''}"><td>${(t.amount / 1e6).toFixed(6)}</td><td>${t.keyset_id}</td><td>${t.C.slice(0, 18)}…</td><td>${t.spent ? 'SPENT' : 'ok'}</td></tr>`).join('');
+  $('tokenTable').innerHTML = `<table><tr><th>amount $</th><th>keyset</th><th>C</th><th>state</th></tr>${rows}</table>`;
+}
+
+// ---- connect ---------------------------------------------------------------
+$('connectBtn').onclick = async () => {
+  try {
+    const url = $('mintUrl').value.replace(/\/$/, '');
+    mint = { url };
+    const info = await api('GET', '/v1/info');
+    const keyset = (await api('GET', '/v1/keys')).keysets[0];
+    mint.unit = info.unit; mint.keyset = keyset; mint.vault = info.vault;
+    mint.meltFee = Number(info.fees?.melt ?? 0);
+    $('mintInfo').innerHTML = `
+      <div class="kv"><b>${info.name}</b> · ${info.version}</div>
+      <div class="kv">keyset <b>${keyset.id}</b> · unit ${info.unit}</div>
+      <div class="kv">vault ${typeof info.vault === 'object' ? `tempo chain <b>${info.vault.chain_id}</b> · token ${info.vault.token}` : info.vault}</div>`;
+    $('mintKeyBtn').disabled = false;
+    $('mintWalletBtn').disabled = typeof info.vault !== 'object';
+    $('sendBtn').disabled = $('recvBtn').disabled = false;
+    $('meltBtn').disabled = typeof info.vault !== 'object' && !info.melt;
+    let stale = 0;
+    for (const t of tokens) if (t.keyset_id !== keyset.id && !t.spent) { t.spent = 'stale'; stale++; }
+    if (stale) { saveTokens(); log(`${stale} token(s) from a rotated keyset marked stale`, 'warn'); }
+    log(`connected to ${info.name} (keyset ${keyset.id})`, 'ok');
+    render();
+  } catch (err) { log(`connect failed: ${err.message}`, 'err'); }
+};
+
+// ---- mint flow -------------------------------------------------------------
+function decompose(amount) {
+  const parts = [];
+  for (let pow = 30; pow >= 0; pow--) if (amount & (2 ** pow)) parts.push(2 ** pow);
+  return parts;
+}
+
+async function payAndMint(sendPayment) {
+  const quote = await api('POST', '/v1/mint/quote', { amount: AMOUNT, unit: mint.unit });
+  $('quoteInfo').innerHTML = `
+    <div class="kv">quote <b>${quote.quote_id.slice(0, 16)}…</b></div>
+    <div class="kv">deposit ${(quote.amount / 1e6).toFixed(6)} to <b>${quote.deposit.to}</b></div>
+    <div class="kv">memo <b>${quote.deposit.memo}</b></div>`;
+  log(`quote ${quote.quote_id.slice(0, 16)}… for $${(AMOUNT / 1e6).toFixed(2)}`);
+
+  const txHash = await sendPayment(quote);
+  log(`payment sent: ${txHash}`, 'ok');
+
+  log('waiting for the mint to observe the deposit…');
+  const start = Date.now();
+  let state = quote.state;
+  while (state !== 'PAID') {
+    if (Date.now() - start > 180_000) throw new Error('timed out waiting for the deposit');
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    state = (await api('GET', `/v1/mint/quote/${quote.quote_id}`)).state;
+  }
+  log(`deposit observed on-chain — quote PAID after ${((Date.now() - start) / 1000).toFixed(1)}s`, 'ok');
+
+  const pending = decompose(AMOUNT).map((amount) => {
+    const secret = bytesToHex(secp256k1.utils.randomPrivateKey());
+    const { B_, r } = blind(hexToBytes(secret));
+    return { amount, secret, r, B_ };
+  });
+  const minted = await api('POST', '/v1/mint', {
+    quote_id: quote.quote_id,
+    outputs: pending.map((p) => ({ amount: p.amount, keyset_id: mint.keyset.id, B_: p.B_ })),
+  });
+  for (const [i, sig] of minted.signatures.entries()) {
+    const p = pending[i];
+    const K = mint.keyset.keys[String(p.amount)];
+    if (!verifyDleq(p.B_, sig.C_, K, sig.dleq)) throw new Error(`DLEQ failed for output ${i} — rejecting signature`);
+    tokens.push({
+      amount: p.amount, keyset_id: mint.keyset.id, secret: p.secret,
+      C: unblind(sig.C_, p.r, K), mint: mint.url,
+      dleq: { e: sig.dleq.e, s: sig.dleq.s, r: bytesToHex(p.r) }, // r makes the proof offline-verifiable by a receiver
+    });
+  }
+  saveTokens();
+  log(`minted ${minted.signatures.length} proofs, all DLEQs verified in-browser — balance updated`, 'ok');
+}
+
+function tempoChain(quote) {
+  return defineChain({
+    id: quote.deposit.chain_id, name: 'tempo-moderato',
+    nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
+    rpcUrls: { default: { http: ['https://rpc.moderato.tempo.xyz'] } },
+  });
+}
+
+$('mintKeyBtn').onclick = async () => {
+  $('mintKeyBtn').disabled = true;
+  try {
+    const key = $('payerKey').value.trim();
+    if (!/^0x[0-9a-fA-F]{64}$/.test(key)) throw new Error('paste a 32-byte 0x… testnet private key');
+    await payAndMint(async (quote) => {
+      const wallet = createWalletClient({ account: privateKeyToAccount(key), chain: tempoChain(quote), transport: http() });
+      return wallet.writeContract({
+        address: quote.deposit.token, abi: transferAbi, functionName: 'transferWithMemo',
+        args: [quote.deposit.to, BigInt(quote.amount), quote.deposit.memo],
+      });
+    });
+  } catch (err) { log(err.message, 'err'); }
+  $('mintKeyBtn').disabled = false;
+};
+
+$('mintWalletBtn').onclick = async () => {
+  $('mintWalletBtn').disabled = true;
+  try {
+    if (!window.ethereum) throw new Error('no browser wallet found (window.ethereum missing)');
+    await payAndMint(async (quote) => {
+      const chainIdHex = '0x' + quote.deposit.chain_id.toString(16);
+      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
+        chainId: chainIdHex, chainName: 'Tempo Moderato (testnet)',
+        nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
+        rpcUrls: ['https://rpc.moderato.tempo.xyz'], blockExplorerUrls: ['https://explore.testnet.tempo.xyz'],
+      }]}).catch(() => {});
+      const [from] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      return window.ethereum.request({ method: 'eth_sendTransaction', params: [{
+        from, to: quote.deposit.token,
+        data: encodeFunctionData({ abi: transferAbi, functionName: 'transferWithMemo',
+          args: [quote.deposit.to, BigInt(quote.amount), quote.deposit.memo] }),
+      }]});
+    });
+  } catch (err) { log(err.message, 'err'); }
+  $('mintWalletBtn').disabled = false;
+};
+
+// ---- swap machinery (shared by send / receive / melt) ----------------------
+function liveTokens() { return tokens.filter((t) => !t.spent); }
+
+/** Swap `inputs` into fresh proofs of `amounts`; returns the new proofs. */
+async function swapInto(inputs, amounts) {
+  const pending = amounts.map((amount) => {
+    const secret = bytesToHex(secp256k1.utils.randomPrivateKey());
+    const { B_, r } = blind(hexToBytes(secret));
+    return { amount, secret, r, B_ };
+  });
+  const res = await api('POST', '/v1/swap', {
+    inputs: inputs.map((t) => ({ amount: t.amount, keyset_id: t.keyset_id, secret: t.secret, C: t.C })),
+    outputs: pending.map((p) => ({ amount: p.amount, keyset_id: mint.keyset.id, B_: p.B_ })),
+  });
+  return res.signatures.map((sig, i) => {
+    const p = pending[i];
+    const K = mint.keyset.keys[String(p.amount)];
+    if (!verifyDleq(p.B_, sig.C_, K, sig.dleq)) throw new Error(`DLEQ failed on swap output ${i}`);
+    return {
+      amount: p.amount, keyset_id: mint.keyset.id, secret: p.secret,
+      C: unblind(sig.C_, p.r, K), mint: mint.url,
+      dleq: { e: sig.dleq.e, s: sig.dleq.s, r: bytesToHex(p.r) },
+    };
+  });
+}
+
+/** Swap the whole live balance into exactly `amount` + change; returns the exact part. */
+async function takeExact(amount) {
+  const inputs = liveTokens();
+  const total = inputs.reduce((s, t) => s + t.amount, 0);
+  if (total < amount) throw new Error(`insufficient balance: have $${(total / 1e6).toFixed(6)}, need $${(amount / 1e6).toFixed(6)}`);
+  const wanted = decompose(amount);
+  const change = total > amount ? decompose(total - amount) : [];
+  const fresh = await swapInto(inputs, [...wanted, ...change]);
+  tokens = tokens.filter((t) => t.spent); // all live inputs were consumed
+  tokens.push(...fresh.slice(wanted.length));
+  saveTokens();
+  return fresh.slice(0, wanted.length);
+}
+
+function parseAmountUsd(inputId) {
+  const amount = Math.round(parseFloat($(inputId).value) * 1e6);
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('enter a positive dollar amount');
+  return amount;
+}
+
+$('sendBtn').onclick = async () => {
+  $('sendBtn').disabled = true;
+  try {
+    const amount = parseAmountUsd('sendAmount');
+    const proofs = await takeExact(amount);
+    $('sendOut').value = JSON.stringify({ mint: mint.url, unit: mint.unit, keyset_id: mint.keyset.id, proofs });
+    log(`bundle of $${(amount / 1e6).toFixed(6)} created — copy it to the receiver (it is a bearer instrument!)`, 'ok');
+  } catch (err) { log(err.message, 'err'); }
+  $('sendBtn').disabled = false;
+};
+
+$('recvBtn').onclick = async () => {
+  $('recvBtn').disabled = true;
+  try {
+    const bundle = JSON.parse($('recvIn').value);
+    if (bundle.keyset_id !== mint.keyset.id) throw new Error(`bundle is from keyset ${bundle.keyset_id}; this mint's is ${mint.keyset.id}`);
+    for (const [i, proof] of bundle.proofs.entries()) {
+      const K = mint.keyset.keys[String(proof.amount)];
+      if (!K || !verifyDleqOffline(proof, K)) throw new Error(`proof ${i} failed offline DLEQ verification — refusing bundle`);
+    }
+    log(`all ${bundle.proofs.length} proofs verified OFFLINE — claiming via swap…`, 'ok');
+    const total = bundle.proofs.reduce((s, p) => s + p.amount, 0);
+    const fresh = await swapInto(bundle.proofs, decompose(total));
+    tokens.push(...fresh);
+    saveTokens();
+    $('recvIn').value = '';
+    log(`claimed $${(total / 1e6).toFixed(6)} — the sender's copies are now worthless`, 'ok');
+  } catch (err) { log(err.message, 'err'); }
+  $('recvBtn').disabled = false;
+};
+
+$('meltBtn').onclick = async () => {
+  $('meltBtn').disabled = true;
+  try {
+    const amount = parseAmountUsd('meltAmount');
+    const to = $('meltTo').value.trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(to)) throw new Error('enter a 20-byte 0x… payout address');
+    const fee = mint.meltFee ?? 0;
+    if (fee) log(`melt fee: $${(fee / 1e6).toFixed(6)} (covers the on-chain payout; burned with your tokens)`);
+    const proofs = await takeExact(amount + fee);
+    const quote = await api('POST', '/v1/melt/quote', { amount, unit: mint.unit, to });
+    log(`melt quote ${quote.melt_id.slice(0, 16)}… — burning proofs and requesting vault payout`);
+    const melted = await api('POST', '/v1/melt', {
+      melt_id: quote.melt_id,
+      inputs: proofs.map((t) => ({ amount: t.amount, keyset_id: t.keyset_id, secret: t.secret, C: t.C })),
+    });
+    $('meltInfo').innerHTML = `<div class="kv">melt <b>${melted.state}</b> — tx <b>${melted.tx_hash ?? '(pending)'}</b></div>`;
+    log(`melt ${melted.state}: $${(amount / 1e6).toFixed(6)} paid to ${to} (tx ${melted.tx_hash})`, 'ok');
+  } catch (err) { log(err.message, 'err'); }
+  $('meltBtn').disabled = false;
+};
+
+$('checkBtn').onclick = async () => {
+  try {
+    const states = await api('POST', '/v1/checkstate', { Ys: tokens.map((t) => yOf(t.secret)) });
+    tokens.forEach((t, i) => { t.spent = states.states[i].state === 'SPENT'; });
+    saveTokens();
+    log(`checkstate: ${states.states.filter((s) => s.state === 'SPENT').length} spent, ${states.states.filter((s) => s.state === 'UNSPENT').length} live`);
+  } catch (err) { log(err.message, 'err'); }
+};
+
+// ---- step 1: throwaway wallet + faucet ----------------------------------------
+const KEY_STORE = 'picocash.demo.payerKey';
+function showWallet(addr, bal) {
+  $('walletInfo').innerHTML = `<div class="kv">address <b>${addr}</b></div><div class="kv">pathUSD balance <b>${bal === null ? '…' : '$' + (Number(bal) / 1e6).toFixed(2)}</b></div>`;
+}
+async function tokenBalance(addr) {
+  const pc = createPublicClient({ chain: { id: 42431, name: 'tempo', nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 }, rpcUrls: { default: { http: [RPC] } } }, transport: http(RPC) });
+  return pc.readContract({ address: TOKEN, abi: parseAbi(['function balanceOf(address) view returns (uint256)']), functionName: 'balanceOf', args: [addr] });
+}
+async function ensureWallet() {
+  let key = localStorage.getItem(KEY_STORE);
+  if (!key) { key = generatePrivateKey(); localStorage.setItem(KEY_STORE, key); }
+  $('payerKey').value = key;
+  return privateKeyToAccount(key).address;
+}
+$('faucetBtn').onclick = async () => {
+  $('faucetBtn').disabled = true;
+  try {
+    const addr = await ensureWallet();
+    showWallet(addr, null);
+    log(`wallet ${addr.slice(0, 10)}… — requesting testnet funds from the faucet`);
+    const res = await fetch(FAUCET_PROXY, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ address: addr }) });
+    const body = await res.json();
+    if (!res.ok || body.error) throw new Error(`faucet: ${JSON.stringify(body.error ?? body)}`);
+    log('faucet sent — waiting for the balance to land…');
+    for (let i = 0; i < 40; i++) {
+      const bal = await tokenBalance(addr);
+      if (bal > 0n) { showWallet(addr, bal); log(`funded: $${(Number(bal) / 1e6).toFixed(2)} pathUSD — now connect to a mint and mint $1`, 'ok'); $('faucetBtn').disabled = false; return; }
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    throw new Error('faucet transfer not seen after 60s — try again');
+  } catch (err) { log(err.message, 'err'); }
+  $('faucetBtn').disabled = false;
+};
+// restore an existing throwaway wallet
+if (localStorage.getItem(KEY_STORE)) {
+  ensureWallet().then(async (addr) => { showWallet(addr, null); try { showWallet(addr, await tokenBalance(addr)); } catch {} });
+  $('faucetBtn').textContent = 'Top up from faucet';
+}
+
+// ---- theme toggle (same as the site) -----------------------------------------
+(function () {
+  var KEY = 'picocash-theme', root = document.documentElement, btn = $('themeToggle');
+  var modes = ['system', 'light', 'dark'], labels = { system: '\u25d0 auto', light: '\u2600 light', dark: '\u263e dark' };
+  var mode = localStorage.getItem(KEY); if (modes.indexOf(mode) < 0) mode = 'system';
+  function apply() { if (mode === 'system') { root.removeAttribute('data-theme'); localStorage.removeItem(KEY); } else { root.setAttribute('data-theme', mode); localStorage.setItem(KEY, mode); } btn.textContent = labels[mode]; }
+  btn.addEventListener('click', function () { mode = modes[(modes.indexOf(mode) + 1) % 3]; apply(); });
+  apply();
+})();
+
+render();
+log('ready — create a testnet wallet (step 1), then connect to a mint');
+</script>
+</body>
+</html>
