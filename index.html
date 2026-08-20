@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PicoCash — private, instant eCash for machine payments</title>
+<meta name="description" content="Chaumian eCash backed 1:1 by stablecoins on Tempo. One deposit, unlimited sub-100ms offline-verified payments. A payment method for MPP.">
+<link rel="icon" type="image/png" href="assets/picocash-icon.png">
+<style>
+  :root {
+    --blue: #154c9c; --green: #1f9e5a;
+    --ink: #16202e; --dim: #5b6878; --bg: #ffffff; --panel: #f5f8fb; --line: #e3e9f0;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  header { border-bottom: 1px solid var(--line); }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
+  nav img { height: 34px; display: block; }
+  nav .links a { margin-left: 22px; color: var(--ink); font-weight: 600; font-size: 15px; }
+  nav .links a:hover { color: var(--blue); text-decoration: none; }
+
+  .hero { text-align: center; padding: 64px 0 48px; }
+  .hero img.mark { width: 108px; height: 108px; margin-bottom: 18px; }
+  .badge { display: inline-block; background: #fef6e2; color: #8a6210; border: 1px solid #efdca6;
+           border-radius: 99px; padding: 3px 14px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
+  h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.15; letter-spacing: -0.02em; }
+  h1 .b { color: var(--blue); } h1 .g { color: var(--green); }
+  .hero p.sub { color: var(--dim); font-size: 19px; max-width: 640px; margin: 18px auto 30px; }
+  .cta a { display: inline-block; border-radius: 8px; padding: 12px 26px; font-weight: 700; margin: 6px 8px; }
+  .cta a.primary { background: var(--blue); color: #fff; }
+  .cta a.primary:hover { background: #113e80; text-decoration: none; }
+  .cta a.secondary { border: 2px solid var(--green); color: var(--green); }
+  .cta a.secondary:hover { background: var(--green); color: #fff; text-decoration: none; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 28px 0 0; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 12px; }
+  .stat b { display: block; font-size: 30px; letter-spacing: -0.02em; color: var(--blue); }
+  .stat:nth-child(2) b { color: var(--green); }
+  .stat span { color: var(--dim); font-size: 14px; }
+
+  section { padding: 52px 0 8px; }
+  h2 { font-size: 26px; letter-spacing: -0.01em; margin-bottom: 8px; }
+  .lede { color: var(--dim); max-width: 700px; margin-bottom: 26px; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+  .card .step { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: var(--green); }
+  .card h3 { margin: 6px 0 8px; font-size: 18px; }
+  .card p { color: var(--dim); font-size: 14.5px; }
+  .card code { background: #eaf0f7; border-radius: 4px; padding: 1px 5px; font-size: 13px; }
+
+  .guarantee { background: linear-gradient(100deg, var(--blue), #0f6a48 130%); color: #fff;
+               border-radius: 14px; padding: 30px 30px; margin-top: 34px; }
+  .guarantee h3 { font-size: 20px; margin-bottom: 8px; }
+  .guarantee p { opacity: 0.92; font-size: 15.5px; max-width: 760px; }
+
+  .repos .card h3 a { color: var(--ink); }
+  .repos .card h3 a:hover { color: var(--blue); }
+  .repos .card .tag { font-size: 12px; color: var(--green); font-weight: 700; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 64px; padding: 26px 0 40px;
+           color: var(--dim); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px 26px; }
+
+  @media (max-width: 720px) {
+    .stats, .cards { grid-template-columns: 1fr; }
+    nav .links a { margin-left: 14px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <nav>
+      <a href="./"><img src="assets/picocash-logo.png" alt="PicoCash"></a>
+      <span class="links">
+        <a href="https://github.com/picocash/pips">pips</a>
+        <a href="https://github.com/picocash">GitHub</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <img class="mark" src="assets/picocash-icon.png" alt="">
+    <div><span class="badge">pre-alpha · spec under RFC · testnet only</span></div>
+    <h1><span class="b">Private, instant eCash</span><br><span class="g">for machine payments</span></h1>
+    <p class="sub">Chaumian bearer tokens backed 1:1 by stablecoins on <a href="https://tempo.xyz">Tempo</a>,
+      built as a payment method for <a href="https://mpp.dev">MPP</a>. One deposit funds unlimited payments —
+      verified offline, with no payer identity and no per-call transaction.</p>
+    <div class="cta">
+      <a class="primary" href="https://github.com/picocash/pips">Read the pips</a>
+      <a class="secondary" href="https://github.com/picocash/picocash">View on GitHub</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>~45 ms</b><span>mean payment acceptance, verified offline — measured, not aspirational</span></div>
+      <div class="stat"><b>$1 → 20 calls</b><span>one deposit funds many payments; no on-chain tx per call</span></div>
+      <div class="stat"><b>0 links</b><span>the mint cannot connect token issuance to redemption</span></div>
+    </div>
+  </div>
+
+  <section>
+    <h2>How it works</h2>
+    <p class="lede">A mint issues blind-signed bearer tokens against stablecoins held in an on-chain vault.
+      Every token carries a proof anyone can verify without contacting the mint.</p>
+    <div class="cards">
+      <div class="card">
+        <span class="step">01 — MINT</span>
+        <h3>Deposit once</h3>
+        <p>Send stablecoins to the mint's vault with a memo binding the deposit to your quote.
+           The mint blind-signs secrets it never sees — the resulting tokens are yours alone.</p>
+      </div>
+      <div class="card">
+        <span class="step">02 — PAY</span>
+        <h3>Spend in milliseconds</h3>
+        <p>Services verify tokens <em>offline</em> via DLEQ proofs and settle asynchronously.
+           Credentials are cryptographically bound to each challenge, so interception buys nothing.</p>
+      </div>
+      <div class="card">
+        <span class="step">03 — MELT</span>
+        <h3>Exit on-chain</h3>
+        <p>Burn tokens, receive stablecoins from the vault. The vault publishes its outstanding
+           supply on-chain — solvency is checked with one <code>eth_call</code>, not trust.</p>
+      </div>
+    </div>
+
+    <div class="guarantee">
+      <h3>The exit guarantee — every clause on-chain</h3>
+      <p>Withdrawals can never be paused. Each melt pays out exactly once. The fee to exit is capped by the
+         vault's committed ceiling. And raising that cap — like rotating the operator key — takes two days
+         of public notice. Verify it all before depositing a cent.</p>
+    </div>
+  </section>
+
+  <section class="repos">
+    <h2>The project</h2>
+    <p class="lede">Everything is open source under Apache-2.0, live on Tempo's Moderato testnet,
+      and under RFC — design feedback is the most valuable contribution right now.</p>
+    <div class="cards">
+      <div class="card">
+        <span class="tag">SPECIFICATIONS</span>
+        <h3><a href="https://github.com/picocash/pips">pips</a></h3>
+        <p>The picocash specs — PIP-00 through PIP-05 plus published test vectors.
+           A pip is a seed: small specifications you can grow an implementation from. Start here.</p>
+      </div>
+      <div class="card">
+        <span class="tag">REFERENCE STACK</span>
+        <h3><a href="https://github.com/picocash/picocash">picocash</a></h3>
+        <p>Crypto core, mint server, agent SDK, MPP payment method, and a browser wallet demo —
+           TypeScript, tested end to end against the live testnet.</p>
+      </div>
+      <div class="card">
+        <span class="tag">ON-CHAIN CUSTODY</span>
+        <h3><a href="https://github.com/picocash/picocash-contracts">picocash-contracts</a></h3>
+        <p>The vault and its factory — Solidity, deployed and source-verified on Moderato.
+           Proof of liabilities, publication policy, and the exit guarantee live here.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap" style="display:flex;flex-wrap:wrap;gap:8px 26px;">
+    <span>© PicoCash · Apache-2.0</span>
+    <a href="https://github.com/picocash">GitHub</a>
+    <a href="https://github.com/picocash/pips">Specifications</a>
+    <a href="mailto:security@picocash.dev">security@picocash.dev</a>
+    <span>Built on Tempo · pre-alpha, do not use with real funds</span>
+  </div>
+</footer>
+
+</body>
+</html>
