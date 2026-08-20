@@ -6,40 +6,73 @@
 <title>PicoCash — private, instant eCash for machine payments</title>
 <meta name="description" content="Chaumian eCash backed 1:1 by stablecoins on Tempo. One deposit, unlimited sub-100ms offline-verified payments. A payment method for MPP.">
 <link rel="icon" type="image/png" href="assets/picocash-icon.png">
+<script>
+  // pre-paint: apply the saved theme before first render (system = no attribute)
+  (function () {
+    var t = localStorage.getItem('picocash-theme');
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
 <style>
   :root {
-    --blue: #154c9c; --green: #1f9e5a;
+    --blue: #154c9c; --green: #1f9e5a;                 /* brand (gradient strip keeps these) */
+    --accent-b: #154c9c; --accent-g: #1f9e5a;          /* text accents, retuned in dark */
     --ink: #16202e; --dim: #5b6878; --bg: #ffffff; --panel: #f5f8fb; --line: #e3e9f0;
+    --code-bg: #eaf0f7; --badge-bg: #fef6e2; --badge-ink: #8a6210; --badge-line: #efdca6;
+    --btn-primary: #154c9c; --btn-primary-hover: #113e80;
+    --logo-img: block; --logo-text: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --accent-b: #6aa1f0; --accent-g: #3dc47c;
+      --ink: #e7ebf1; --dim: #93a0b0; --bg: #0e1116; --panel: #161b23; --line: #26303d;
+      --code-bg: #0b0e13; --badge-bg: #3a2b0a; --badge-ink: #fbbf24; --badge-line: #6b510f;
+      --btn-primary: #2f6ac2; --btn-primary-hover: #3d7ad4;
+      --logo-img: none; --logo-text: inline;
+    }
+  }
+  :root[data-theme="dark"] {
+    --accent-b: #6aa1f0; --accent-g: #3dc47c;
+    --ink: #e7ebf1; --dim: #93a0b0; --bg: #0e1116; --panel: #161b23; --line: #26303d;
+    --code-bg: #0b0e13; --badge-bg: #3a2b0a; --badge-ink: #fbbf24; --badge-line: #6b510f;
+    --btn-primary: #2f6ac2; --btn-primary-hover: #3d7ad4;
+    --logo-img: none; --logo-text: inline;
   }
   * { box-sizing: border-box; margin: 0; }
   body { background: var(--bg); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  a { color: var(--blue); text-decoration: none; }
+  a { color: var(--accent-b); text-decoration: none; }
   a:hover { text-decoration: underline; }
   .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
 
   header { border-bottom: 1px solid var(--line); }
   nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
-  nav img { height: 34px; display: block; }
+  nav img { height: 34px; display: var(--logo-img); }
+  .brand-text { display: var(--logo-text); font-size: 24px; font-weight: 800; letter-spacing: -0.01em; }
+  .brand-text .b { color: var(--accent-b); } .brand-text .g { color: var(--accent-g); }
+  nav .right { display: flex; align-items: center; }
+  #themeToggle { margin-left: 20px; background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+                 border-radius: 99px; padding: 5px 12px; font: 600 13px/1.4 inherit; cursor: pointer; }
+  #themeToggle:hover { border-color: var(--accent-b); }
   nav .links a { margin-left: 22px; color: var(--ink); font-weight: 600; font-size: 15px; }
-  nav .links a:hover { color: var(--blue); text-decoration: none; }
+  nav .links a:hover { color: var(--accent-b); text-decoration: none; }
 
   .hero { text-align: center; padding: 64px 0 48px; }
   .hero img.mark { width: 108px; height: 108px; margin-bottom: 18px; }
-  .badge { display: inline-block; background: #fef6e2; color: #8a6210; border: 1px solid #efdca6;
+  .badge { display: inline-block; background: var(--badge-bg); color: var(--badge-ink); border: 1px solid var(--badge-line);
            border-radius: 99px; padding: 3px 14px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
   h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.15; letter-spacing: -0.02em; }
-  h1 .b { color: var(--blue); } h1 .g { color: var(--green); }
+  h1 .b { color: var(--accent-b); } h1 .g { color: var(--accent-g); }
   .hero p.sub { color: var(--dim); font-size: 19px; max-width: 640px; margin: 18px auto 30px; }
   .cta a { display: inline-block; border-radius: 8px; padding: 12px 26px; font-weight: 700; margin: 6px 8px; }
-  .cta a.primary { background: var(--blue); color: #fff; }
-  .cta a.primary:hover { background: #113e80; text-decoration: none; }
-  .cta a.secondary { border: 2px solid var(--green); color: var(--green); }
-  .cta a.secondary:hover { background: var(--green); color: #fff; text-decoration: none; }
+  .cta a.primary { background: var(--btn-primary); color: #fff; }
+  .cta a.primary:hover { background: var(--btn-primary-hover); text-decoration: none; }
+  .cta a.secondary { border: 2px solid var(--accent-g); color: var(--accent-g); }
+  .cta a.secondary:hover { background: var(--accent-g); color: #fff; text-decoration: none; }
 
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 28px 0 0; }
   .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 12px; }
-  .stat b { display: block; font-size: 30px; letter-spacing: -0.02em; color: var(--blue); }
-  .stat:nth-child(2) b { color: var(--green); }
+  .stat b { display: block; font-size: 30px; letter-spacing: -0.02em; color: var(--accent-b); }
+  .stat:nth-child(2) b { color: var(--accent-g); }
   .stat span { color: var(--dim); font-size: 14px; }
 
   section { padding: 52px 0 8px; }
@@ -48,10 +81,10 @@
 
   .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
-  .card .step { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: var(--green); }
+  .card .step { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: var(--accent-g); }
   .card h3 { margin: 6px 0 8px; font-size: 18px; }
   .card p { color: var(--dim); font-size: 14.5px; }
-  .card code { background: #eaf0f7; border-radius: 4px; padding: 1px 5px; font-size: 13px; }
+  .card code { background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-size: 13px; }
 
   .guarantee { background: linear-gradient(100deg, var(--blue), #0f6a48 130%); color: #fff;
                border-radius: 14px; padding: 30px 30px; margin-top: 34px; }
@@ -59,8 +92,8 @@
   .guarantee p { opacity: 0.92; font-size: 15.5px; max-width: 760px; }
 
   .repos .card h3 a { color: var(--ink); }
-  .repos .card h3 a:hover { color: var(--blue); }
-  .repos .card .tag { font-size: 12px; color: var(--green); font-weight: 700; }
+  .repos .card h3 a:hover { color: var(--accent-b); }
+  .repos .card .tag { font-size: 12px; color: var(--accent-g); font-weight: 700; }
 
   footer { border-top: 1px solid var(--line); margin-top: 64px; padding: 26px 0 40px;
            color: var(--dim); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px 26px; }
@@ -76,10 +109,13 @@
 <header>
   <div class="wrap">
     <nav>
-      <a href="./"><img src="assets/picocash-logo.png" alt="PicoCash"></a>
-      <span class="links">
-        <a href="https://github.com/picocash/pips">pips</a>
-        <a href="https://github.com/picocash">GitHub</a>
+      <a href="./"><img src="assets/picocash-logo.png" alt="PicoCash"><span class="brand-text" aria-hidden="true"><span class="b">Pico</span><span class="g">Cash</span></span></a>
+      <span class="right">
+        <span class="links">
+          <a href="https://github.com/picocash/pips">pips</a>
+          <a href="https://github.com/picocash">GitHub</a>
+        </span>
+        <button id="themeToggle" title="Theme: follows your system. Click to override." aria-label="Toggle color theme">◐ auto</button>
       </span>
     </nav>
   </div>
@@ -176,5 +212,22 @@
   </div>
 </footer>
 
+<script>
+  (function () {
+    var KEY = 'picocash-theme', root = document.documentElement, btn = document.getElementById('themeToggle');
+    var modes = ['system', 'light', 'dark'];
+    var labels = { system: '\u25d0 auto', light: '\u2600 light', dark: '\u263e dark' };
+    var mode = localStorage.getItem(KEY);
+    if (modes.indexOf(mode) < 0) mode = 'system';
+    function apply() {
+      if (mode === 'system') { root.removeAttribute('data-theme'); localStorage.removeItem(KEY); }
+      else { root.setAttribute('data-theme', mode); localStorage.setItem(KEY, mode); }
+      btn.textContent = labels[mode];
+      btn.title = mode === 'system' ? 'Theme: follows your system. Click to override.' : 'Theme: ' + mode + '. Click to change.';
+    }
+    btn.addEventListener('click', function () { mode = modes[(modes.indexOf(mode) + 1) % 3]; apply(); });
+    apply();
+  })();
+</script>
 </body>
 </html>
