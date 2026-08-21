@@ -138,6 +138,7 @@
       <span class="right">
         <span class="links">
           <a href="demo/">demo</a>
+          <a href="https://mint.picocash.dev/">mint status</a>
           <a href="https://github.com/picocash/pips">pips</a>
           <a href="https://github.com/picocash/pips/discussions">discuss</a>
           <a href="https://github.com/picocash">GitHub</a>
@@ -262,7 +263,7 @@
         <div class="item"><span class="mark">✓</span><div><b>One payout per melt, by contract</b><span>Each melt id pays out exactly once (<code>meltPaid</code>). A crashed or replayed mint can never pay twice.</span></div></div>
         <div class="item"><span class="mark">✓</span><div><b>Exit fee capped on-chain</b><span>The mint can't quote a melt fee above the vault's committed <code>maxMeltFee</code>. Lowering is instant; raising waits out the timelock.</span></div></div>
         <div class="item"><span class="mark">✓</span><div><b>Timelocked control changes</b><span>Rotating the operator key or raising the fee ceiling takes the vault's public timelock (2 days on the testnet vaults) — time for holders to exit first.</span></div></div>
-        <div class="item"><span class="mark">✓</span><div><b>Outstanding supply published on-chain</b><span>The operator attests <code>issued − spent</code> via <code>publishOutstandingSupply</code>; anyone compares it to the vault balance.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>Outstanding supply published on-chain</b><span>The operator attests <code>issued − spent</code> via <code>publishOutstandingSupply</code>; anyone compares it to the vault balance — the <a href="https://mint.picocash.dev/" style="color:#fff">live status page</a> does it for you, every 30 s, with every deposit and payout listed.</span></div></div>
         <div class="item"><span class="mark">✓</span><div><b>Miss the attestation, lose deposits</b><span>The publication policy is fixed at deployment. Go overdue and <code>ecashMint</code> reverts until the mint publishes — melts keep working.</span></div></div>
         <div class="item"><span class="mark">✓</span><div><b>Burn before pay, never sign before record</b><span>Proofs are consumed and the debt recorded in one DB transaction before any chain call; a payout that landed is never repeated.</span></div></div>
         <div class="item"><span class="mark">✓</span><div><b>Canonical bytecode, no hidden paths</b><span><code>isVault()</code> proves a vault came from the factory; <code>sweep</code> can never move the backing token; source is verified.</span></div></div>
