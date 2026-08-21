@@ -58,6 +58,9 @@
   details summary { cursor:pointer; color:var(--dim); font-size:13px; margin-top:8px; }
   .muted { color:var(--dim); font-size:13px; margin:0 0 6px; }
   @media (max-width:520px) { nav .right a:not(.keep) { display:none; } }
+  button.busy { opacity: .7; cursor: progress; }
+  button.busy::before { content: ''; display: inline-block; width: .8em; height: .8em; margin-right: .5em; vertical-align: -0.1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -253,6 +256,13 @@ function render() {
   show('tokenTable', el('table', {}, head, ...rows));
 }
 
+// busy(): disabled + spinner label while an async step runs; restores the label after
+function busy(btn, label, fn) {
+  const idle = btn.textContent;
+  btn.disabled = true; btn.classList.add('busy'); btn.textContent = label;
+  return fn((step) => { btn.textContent = step; }).finally(() => { btn.disabled = false; btn.classList.remove('busy'); btn.textContent = btn.dataset.idle ?? idle; });
+}
+
 // ---- connect ---------------------------------------------------------------
 $('connectBtn').onclick = async () => {
   try {
@@ -338,8 +348,7 @@ function tempoChain(quote) {
   });
 }
 
-$('mintKeyBtn').onclick = async () => {
-  $('mintKeyBtn').disabled = true;
+$('mintKeyBtn').onclick = () => busy($('mintKeyBtn'), 'Paying & minting…', async () => {
   try {
     const key = localStorage.getItem(KEY_STORE);
     if (!key) throw new Error('create the throwaway wallet in step 1 first');
@@ -351,11 +360,9 @@ $('mintKeyBtn').onclick = async () => {
       });
     });
   } catch (err) { log(err.message, 'err'); }
-  $('mintKeyBtn').disabled = false;
-};
+});
 
-$('mintWalletBtn').onclick = async () => {
-  $('mintWalletBtn').disabled = true;
+$('mintWalletBtn').onclick = () => busy($('mintWalletBtn'), 'Paying & minting…', async () => {
   try {
     if (!window.ethereum) throw new Error('no browser wallet found (window.ethereum missing)');
     await payAndMint(async (quote) => {
@@ -373,8 +380,7 @@ $('mintWalletBtn').onclick = async () => {
       }]});
     });
   } catch (err) { log(err.message, 'err'); }
-  $('mintWalletBtn').disabled = false;
-};
+});
 
 // ---- PIP-06 token serialization: "picoA" + base64url(JSON) -------------------
 function b64url(bytes) { let bin = ''; for (const b of bytes) bin += String.fromCharCode(b); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
@@ -517,8 +523,7 @@ $('recvBtn').onclick = async () => {
   $('recvBtn').disabled = false;
 };
 
-$('meltBtn').onclick = async () => {
-  $('meltBtn').disabled = true;
+$('meltBtn').onclick = () => busy($('meltBtn'), 'Melting…', async () => {
   try {
     const amount = parseAmountUsd('meltAmount');
     const to = $('meltTo').value.trim();
@@ -535,8 +540,7 @@ $('meltBtn').onclick = async () => {
     show('meltInfo', kv('melt ', b(melted.state), ' — tx ', b(melted.tx_hash ?? '(pending)')));
     log(`melt ${melted.state}: $${(amount / 1e6).toFixed(6)} paid to ${to} (tx ${melted.tx_hash})`, 'ok');
   } catch (err) { log(err.message, 'err'); }
-  $('meltBtn').disabled = false;
-};
+});
 
 $('checkBtn').onclick = async () => {
   try {
@@ -561,25 +565,37 @@ async function ensureWallet() {
   if (!key) { key = generatePrivateKey(); localStorage.setItem(KEY_STORE, key); }
   return privateKeyToAccount(key).address;
 }
-$('faucetBtn').onclick = async () => {
-  $('faucetBtn').disabled = true;
+$('faucetBtn').onclick = () => busy($('faucetBtn'), 'Creating wallet…', async (step) => {
+  let addr;
   try {
-    const addr = await ensureWallet();
+    addr = await ensureWallet();
     showWallet(addr, null);
+    const before = await tokenBalance(addr).catch(() => 0n);
+    showWallet(addr, before);
+    step('Requesting faucet…');
     log(`wallet ${addr.slice(0, 10)}… — requesting testnet funds from the faucet`);
     const res = await fetch(FAUCET_PROXY, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ address: addr }) });
-    const body = await res.json();
-    if (!res.ok || body.error) throw new Error(`faucet: ${JSON.stringify(body.error ?? body)}`);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body.error) {
+      const msg = typeof body.error === 'string' ? body.error : JSON.stringify(body.error ?? body);
+      throw new Error(`faucet refused (${res.status}): ${msg}${before > 0n ? ' — your wallet already has funds, you can continue' : ''}`);
+    }
+    step('Waiting for funds…');
     log('faucet sent — waiting for the balance to land…');
     for (let i = 0; i < 40; i++) {
-      const bal = await tokenBalance(addr);
-      if (bal > 0n) { showWallet(addr, bal); log(`funded: $${(Number(bal) / 1e6).toFixed(2)} pathUSD — now connect to a mint and mint $1`, 'ok'); $('faucetBtn').disabled = false; return; }
+      const bal = await tokenBalance(addr).catch(() => before);
+      if (bal > before) { showWallet(addr, bal); log(`funded: $${(Number(bal) / 1e6).toFixed(2)} pathUSD — now connect to a mint and mint $1`, 'ok'); return; }
+      step(`Waiting for funds… ${(i + 1) * 1.5 | 0}s`);
       await new Promise((r) => setTimeout(r, 1500));
     }
     throw new Error('faucet transfer not seen after 60s — try again');
-  } catch (err) { log(err.message, 'err'); }
-  $('faucetBtn').disabled = false;
-};
+  } catch (err) {
+    log(err.message, 'err');
+    if (addr) tokenBalance(addr).then((bal) => showWallet(addr, bal)).catch(() => {});
+  } finally {
+    $('faucetBtn').dataset.idle = 'Top up from faucet';
+  }
+});
 // restore an existing throwaway wallet
 if (localStorage.getItem(KEY_STORE)) {
   ensureWallet().then(async (addr) => { showWallet(addr, null); try { showWallet(addr, await tokenBalance(addr)); } catch {} });
