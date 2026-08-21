@@ -613,7 +613,12 @@ if (localStorage.getItem(KEY_STORE)) {
 })();
 
 // a link pasted into a browser lands here via the relay's redirect: ?link=<origin>/t/<id> plus the original #key
-{ const q = new URLSearchParams(location.search).get('link'); if (q && location.hash.length > 1) { $('recvIn').value = q + location.hash; history.replaceState(null, '', location.pathname); log('token link detected — connect to the mint, then click "Verify offline & claim"', 'warn'); } }
+{
+  const q = new URLSearchParams(location.search).get('link');
+  const tok = location.hash.startsWith('#token=') ? decodeURIComponent(location.hash.slice(7)) : null;
+  if (q && location.hash.length > 1 && !tok) { $('recvIn').value = q + location.hash; history.replaceState(null, '', location.pathname); log('token link detected — connect to the mint, then click "Verify offline & claim"', 'warn'); }
+  else if (tok && /^pico[A-Z][A-Za-z0-9_-]+$/.test(tok)) { $('recvIn').value = tok; history.replaceState(null, '', location.pathname); log('token received from a link page — connect to the mint, then click "Verify offline & claim"', 'warn'); }
+}
 render();
 log('ready — create a testnet wallet (step 1), then connect to a mint');
 </script>
