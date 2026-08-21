@@ -256,7 +256,7 @@
       <h3>The exit guarantee — every clause on-chain</h3>
       <p>A mint is a custodian you should not have to trust. So the rules that protect the funds live in the vault
          contract, deployed from a public factory, readable with one <code>eth_call</code> before you deposit a cent.
-         Here is what is enforced today, and what is not yet.</p>
+         Here is what is enforced today, and the one thing that is not yet.</p>
       <div class="grid">
         <div class="item"><span class="mark">✓</span><div><b>Payouts cannot be paused</b><span><code>ecashMelt</code> has no pause switch. Deposits can be paused; redemptions can't.</span></div></div>
         <div class="item"><span class="mark">✓</span><div><b>One payout per melt, by contract</b><span>Each melt id pays out exactly once (<code>meltPaid</code>). A crashed or replayed mint can never pay twice.</span></div></div>
@@ -266,7 +266,7 @@
         <div class="item"><span class="mark">✓</span><div><b>Miss the attestation, lose deposits</b><span>The publication policy is fixed at deployment. Go overdue and <code>ecashMint</code> reverts until the mint publishes — melts keep working.</span></div></div>
         <div class="item"><span class="mark">✓</span><div><b>Burn before pay, never sign before record</b><span>Proofs are consumed and the debt recorded in one DB transaction before any chain call; a payout that landed is never repeated.</span></div></div>
         <div class="item"><span class="mark">✓</span><div><b>Canonical bytecode, no hidden paths</b><span><code>isVault()</code> proves a vault came from the factory; <code>sweep</code> can never move the backing token; source is verified.</span></div></div>
-        <div class="item todo"><span class="mark">…</span><div><b>Unilateral holder exit — designed, prototyped, not live</b><span>Today only the operator can trigger a payout; if a mint goes silent, funds are visible and un-pausable but stuck. <a href="https://github.com/picocash/pips/blob/main/PIP-04.md#emergency-redemption--unilateral-holder-exit-proposed-v02" style="color:#fff">PIP-04 §Emergency redemption</a> lets holders redeem at the vault directly after a grace period — the vault verifies each token on-chain with the mint's <em>public</em> key. The <a href="https://github.com/picocash/picocash-contracts/tree/main/src/emergency" style="color:#fff">verifier prototype</a> passes against real proofs (≈1.75M gas each); it ships in the next vault version.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>Unilateral holder exit — no mint needed</b><span>If the attestation goes overdue past the vault's grace period (~7 days), anyone redeems tokens at the vault directly: it verifies each token's DLEQ and P2PK lock on-chain with the mint's <em>public</em> key, keeps its own spent set, and caps payouts at the last attested supply. <a href="https://github.com/picocash/pips/blob/main/PIP-04.md#emergency-redemption--unilateral-holder-exit" style="color:#fff">PIP-04</a> · live on Moderato.</span></div></div>
         <div class="item todo"><span class="mark">…</span><div><b>Minimum timelock in the factory — next version</b><span>Today a vault can be deployed with any timelock; read <code>info()</code> before trusting one.</span></div></div>
       </div>
       <p class="foot">Pre-alpha, testnet only, unaudited. The full list of what is and isn't covered is in
