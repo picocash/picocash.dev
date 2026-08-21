@@ -79,12 +79,25 @@
   h2 { font-size: 26px; letter-spacing: -0.01em; margin-bottom: 8px; }
   .lede { color: var(--dim); max-width: 700px; margin-bottom: 26px; }
 
-  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
   .card .step { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: var(--accent-g); }
   .card h3 { margin: 6px 0 8px; font-size: 18px; }
   .card p { color: var(--dim); font-size: 14.5px; }
   .card code { background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-size: 13px; }
+
+  .card details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .card summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--accent-b); list-style: none; }
+  .card summary::-webkit-details-marker { display: none; }
+  .card summary::before { content: '▸ '; }
+  .card details[open] summary::before { content: '▾ '; }
+  .card ol.tech { margin: 10px 0 0 18px; padding: 0; font-size: 13.5px; color: var(--dim); }
+  .card ol.tech li { margin-bottom: 8px; }
+  .card ol.tech b { color: var(--ink); font-weight: 600; }
+  .card ol.tech code { white-space: nowrap; }
+  .card .link-note { margin-top: 10px; font-size: 13px; color: var(--ink); background: var(--code-bg); border-radius: 8px; padding: 8px 10px; }
+  .card .link-note code { background: none; padding: 0; }
+  .card details a { color: var(--accent-b); }
 
   .guarantee { background: linear-gradient(100deg, var(--blue), #0f6a48 130%); color: #fff;
                border-radius: 14px; padding: 30px 30px; margin-top: 34px; }
@@ -154,26 +167,84 @@
         <h3>Deposit once</h3>
         <p>Send stablecoins to the mint's vault with a memo binding the deposit to your quote.
            The mint blind-signs secrets it never sees — the resulting tokens are yours alone.</p>
+        <details>
+          <summary>More tech info</summary>
+          <ol class="tech">
+            <li><b>Quote.</b> <code>POST /v1/mint/quote {amount, unit}</code> → the mint returns a fresh 32-byte <code>quote_id</code>
+                and a deposit instruction: the vault address, the TIP-20 token, and <code>memo = quote_id</code>.</li>
+            <li><b>Deposit.</b> You call the token's <code>transferWithMemo(vault, amount, memo)</code> on Tempo — an ordinary TIP-20 transfer
+                whose <code>bytes32</code> memo is your quote id. The vault holds the funds; the mint holds no keys to them that could skip the vault's rules.</li>
+            <li><b>Observation.</b> The mint watches the token's <code>TransferWithMemo</code> events with <code>to = vault</code>. An event whose
+                <em>indexed</em> memo equals an open quote id and whose amount covers the quote flips that quote to <code>PAID</code>.
+                No other signal is accepted — the chain is the only oracle.</li>
+            <li><b>Blinding.</b> Your wallet picks secrets <code>x</code>, computes <code>Y = hash_to_curve(x)</code>, blinds them as
+                <code>B_ = Y + r·G</code>, and sends only <code>B_</code> with the quote id: <code>POST /v1/mint {quote_id, outputs}</code>.</li>
+            <li><b>Signing.</b> Inside one DB transaction the mint marks the quote issued, records each <code>B_</code> (single-use), and returns
+                <code>C_ = k·B_</code> with a DLEQ proof that the same key <code>k</code> signed it. The mint never sees <code>x</code> or <code>Y</code>.</li>
+            <li><b>Unblinding.</b> The wallet computes <code>C = C_ − r·K</code>. The proof <code>(x, C)</code> is the token; anyone can check
+                the DLEQ against the mint's published key <code>K</code>, offline.</li>
+          </ol>
+          <div class="link-note">One quote ↔ one memo ↔ one deposit transaction ↔ one set of blind signatures.
+            The link is the 32-byte <code>quote_id</code>, visible in the transfer's memo on-chain and in the mint's issuance record —
+            but it never appears in the tokens themselves, which is what makes later spending unlinkable.
+            <a href="https://github.com/picocash/pips/blob/main/PIP-02.md">PIP-02</a> · <a href="https://github.com/picocash/pips/blob/main/PIP-00.md">PIP-00</a></div>
+        </details>
       </div>
       <div class="card">
         <span class="step">02 — PAY</span>
         <h3>Spend in milliseconds</h3>
         <p>Services verify tokens <em>offline</em> via DLEQ proofs and settle asynchronously.
            Credentials are cryptographically bound to each challenge, so interception buys nothing.</p>
+        <details>
+          <summary>More tech info</summary>
+          <ol class="tech">
+            <li><b>Challenge.</b> The service answers an unpaid request with <code>402</code> and an MPP challenge: amount, unit, its allow-listed
+                mints and keysets, a 32-byte <code>nonce</code>, and optionally its P2PK <code>pubkey</code>.</li>
+            <li><b>Bind.</b> The agent swaps held tokens at the mint into fresh ones whose secrets are
+                <code>["PC-BIND", {nonce, realm, salt}]</code> — the secret itself commits to this challenge. Tokens a human pre-locked to the
+                service's key (<a href="https://github.com/picocash/pips/blob/main/PIP-08.md">PIP-08</a>) are presented as-is instead.</li>
+            <li><b>Credential.</b> Proofs summing to exactly the amount, each with its DLEQ payload <code>{e, s, r}</code>, travel in the
+                <code>Authorization: Payment …</code> header.</li>
+            <li><b>Six offline checks (~45 ms).</b> Challenge single-use → mint/keyset/unit allow-listed → binding → exact amount and valid
+                denominations → DLEQ per proof against the cached keyset → no duplicate <code>Y</code>. No call to the mint, no call to the chain.</li>
+            <li><b>Settle.</b> The service swaps the proofs at the mint for ones only it knows — that swap is the double-spend check and the
+                moment of finality. By default it happens before <code>success</code> is returned; a service can opt into accept-then-settle.</li>
+          </ol>
+          <div class="link-note">Nothing in this path touches Tempo. The service learns that a valid token from an allowed mint paid this exact challenge —
+            not who deposited, not which deposit. <a href="https://github.com/picocash/pips/blob/main/PIP-05.md">PIP-05</a></div>
+        </details>
       </div>
       <div class="card">
         <span class="step">03 — MELT</span>
         <h3>Exit on-chain</h3>
         <p>Burn tokens, receive stablecoins from the vault. The vault publishes its outstanding
            supply on-chain — solvency is checked with one <code>eth_call</code>, not trust.</p>
+        <details>
+          <summary>More tech info</summary>
+          <ol class="tech">
+            <li><b>Quote.</b> <code>POST /v1/melt/quote {amount, unit, to}</code> → a 32-byte <code>melt_id</code>, the payout address, and the
+                flat melt fee (always ≤ the vault's on-chain <code>maxMeltFee</code>).</li>
+            <li><b>Burn first.</b> <code>POST /v1/melt {melt_id, inputs}</code> with proofs summing to <code>amount + fee</code>. In one DB transaction
+                the mint writes every <code>Y</code> to the spent ledger and records the debt (<code>PENDING</code>) — before any chain call.</li>
+            <li><b>Payout.</b> The operator key calls <code>vault.ecashMelt(to, amount, meltId)</code>. The vault transfers the token to <code>to</code>
+                and sets <code>meltPaid[meltId] = true</code>; a second call with the same id reverts, whatever the mint's database says.</li>
+            <li><b>Crash-safe.</b> If the mint dies between burn and payout, the quote is <code>OWED</code>; re-posting the same inputs retries,
+                and the mint first asks the vault <code>meltPaid(meltId)</code> so a payout that landed is never repeated.</li>
+            <li><b>Attestation.</b> Separately, the operator publishes <code>outstanding = issued − spent</code> via
+                <code>vault.publishOutstandingSupply</code> under a policy fixed at deployment; miss the interval and the vault refuses new deposits
+                until it is published.</li>
+          </ol>
+          <div class="link-note">One melt quote ↔ one <code>melt_id</code> ↔ one <code>ecashMelt</code> transaction, enforced by the contract, not by the server.
+            <a href="https://github.com/picocash/pips/blob/main/PIP-03.md">PIP-03</a> · <a href="https://github.com/picocash/pips/blob/main/PIP-04.md">PIP-04</a></div>
+        </details>
       </div>
     </div>
 
     <div class="guarantee">
       <h3>The exit guarantee — every clause on-chain</h3>
-      <p>Withdrawals can never be paused. Each melt pays out exactly once. The fee to exit is capped by the
-         vault's committed ceiling. And raising that cap — like rotating the operator key — takes two days
-         of public notice. Verify it all before depositing a cent.</p>
+      <p>The contract cannot pause payouts. Each melt pays out exactly once. The fee to exit is capped by the
+         vault's committed ceiling. And raising that cap — like rotating the operator key — takes the vault's
+         public timelock (two days on the testnet vaults). Verify it all before depositing a cent.</p>
     </div>
   </section>
 
@@ -185,7 +256,7 @@
       <div class="card">
         <span class="tag">SPECIFICATIONS</span>
         <h3><a href="https://github.com/picocash/pips">pips</a></h3>
-        <p>The picocash specs — PIP-00 through PIP-05 plus published test vectors.
+        <p>The picocash specs — PIP-00 through PIP-08 plus published test vectors.
            A pip is a seed: small specifications you can grow an implementation from.
            The open design questions are up for debate in
            <a href="https://github.com/picocash/pips/discussions">Discussions</a> — start there.</p>
