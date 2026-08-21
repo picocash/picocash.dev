@@ -83,7 +83,7 @@
   <div class="card">
     <h2>Step 2 — connect to a mint</h2>
     <label>Mint URL</label>
-    <input id="mintUrl" value="https://picocash-mint.arun-fad.workers.dev">
+    <input id="mintUrl" value="https://mint.picocash.dev">
     <button id="connectBtn">Connect</button>
     <div id="mintInfo"></div>
   </div>
@@ -148,7 +148,7 @@ import { privateKeyToAccount, generatePrivateKey } from 'https://esm.sh/viem@2.3
 import { createPublicClient } from 'https://esm.sh/viem@2.38.5';
 
 // faucet proxy lives on the hosted mint worker (works even if you point the mint URL elsewhere)
-const FAUCET_PROXY = 'https://picocash-mint.arun-fad.workers.dev/dev/faucet';
+const FAUCET_PROXY = 'https://mint.picocash.dev/dev/faucet';
 const RPC = 'https://rpc.moderato.tempo.xyz';
 const TOKEN = '0x20c0000000000000000000000000000000000000';
 
