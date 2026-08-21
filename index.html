@@ -104,6 +104,18 @@
   .guarantee h3 { font-size: 20px; margin-bottom: 8px; }
   .guarantee p { opacity: 0.92; font-size: 15.5px; max-width: 760px; }
 
+  .guarantee .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 22px; margin-top: 18px; }
+  .guarantee .item { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; line-height: 1.45; }
+  .guarantee .item .mark { flex: 0 0 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.18); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; margin-top: 2px; }
+  .guarantee .item b { display: block; font-weight: 700; }
+  .guarantee .item span { opacity: .88; }
+  .guarantee .item code { background: rgba(255,255,255,.14); border-radius: 4px; padding: 0 5px; font-size: 13px; }
+  .guarantee .item.todo { opacity: .78; }
+  .guarantee .item.todo .mark { background: transparent; border: 1.5px dashed rgba(255,255,255,.6); }
+  .guarantee .foot { margin-top: 18px; font-size: 13.5px; opacity: .85; }
+  .guarantee .foot a { color: #fff; }
+  @media (max-width: 720px) { .guarantee .grid { grid-template-columns: 1fr; } }
+
   .repos .card h3 a { color: var(--ink); }
   .repos .card h3 a:hover { color: var(--accent-b); }
   .repos .card .tag { font-size: 12px; color: var(--accent-g); font-weight: 700; }
@@ -242,9 +254,24 @@
 
     <div class="guarantee">
       <h3>The exit guarantee — every clause on-chain</h3>
-      <p>The contract cannot pause payouts. Each melt pays out exactly once. The fee to exit is capped by the
-         vault's committed ceiling. And raising that cap — like rotating the operator key — takes the vault's
-         public timelock (two days on the testnet vaults). Verify it all before depositing a cent.</p>
+      <p>A mint is a custodian you should not have to trust. So the rules that protect the funds live in the vault
+         contract, deployed from a public factory, readable with one <code>eth_call</code> before you deposit a cent.
+         Here is what is enforced today, and what is not yet.</p>
+      <div class="grid">
+        <div class="item"><span class="mark">✓</span><div><b>Payouts cannot be paused</b><span><code>ecashMelt</code> has no pause switch. Deposits can be paused; redemptions can't.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>One payout per melt, by contract</b><span>Each melt id pays out exactly once (<code>meltPaid</code>). A crashed or replayed mint can never pay twice.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>Exit fee capped on-chain</b><span>The mint can't quote a melt fee above the vault's committed <code>maxMeltFee</code>. Lowering is instant; raising waits out the timelock.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>Timelocked control changes</b><span>Rotating the operator key or raising the fee ceiling takes the vault's public timelock (2 days on the testnet vaults) — time for holders to exit first.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>Outstanding supply published on-chain</b><span>The operator attests <code>issued − spent</code> via <code>publishOutstandingSupply</code>; anyone compares it to the vault balance.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>Miss the attestation, lose deposits</b><span>The publication policy is fixed at deployment. Go overdue and <code>ecashMint</code> reverts until the mint publishes — melts keep working.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>Burn before pay, never sign before record</b><span>Proofs are consumed and the debt recorded in one DB transaction before any chain call; a payout that landed is never repeated.</span></div></div>
+        <div class="item"><span class="mark">✓</span><div><b>Canonical bytecode, no hidden paths</b><span><code>isVault()</code> proves a vault came from the factory; <code>sweep</code> can never move the backing token; source is verified.</span></div></div>
+        <div class="item todo"><span class="mark">…</span><div><b>Unilateral holder exit — under RFC, not live</b><span>Today only the operator can trigger a payout. If a mint goes silent, funds are visible and un-pausable but stuck. A path where holders redeem tokens at the vault directly, with no mint involved, is being designed in <a href="https://github.com/picocash/pips/blob/main/PIP-04.md" style="color:#fff">PIP-04</a>.</span></div></div>
+        <div class="item todo"><span class="mark">…</span><div><b>Minimum timelock in the factory — next version</b><span>Today a vault can be deployed with any timelock; read <code>info()</code> before trusting one.</span></div></div>
+      </div>
+      <p class="foot">Pre-alpha, testnet only, unaudited. The full list of what is and isn't covered is in
+        <a href="https://github.com/picocash/picocash/blob/main/SECURITY.md">SECURITY.md</a> and
+        <a href="https://github.com/picocash/pips/blob/main/PIP-04.md">PIP-04</a>.</p>
     </div>
   </section>
 
